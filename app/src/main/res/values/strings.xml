@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">BoletosFEI</string>
+    <string name="sem_internet">Sem internet</string>
+</resources>

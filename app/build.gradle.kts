@@ -3,14 +3,14 @@ plugins {
 }
 android {
     namespace = "com.marinov.boletosfei"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.marinov.boletosfei"
         minSdk = 30
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 1
-        versionName = "1.1"
+        versionName = "1.2"
     }
 
     buildTypes {

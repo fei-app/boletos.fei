@@ -156,14 +156,12 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun clearAllCacheData() {
-        getSharedPreferences("DadosFEI", MODE_PRIVATE).edit().clear().apply()
-        getSharedPreferences("HomeFragmentCache", MODE_PRIVATE).edit().clear().apply()
+        getSharedPreferences("DadosFEI", MODE_PRIVATE).edit { clear() }
+        getSharedPreferences("HomeFragmentCache", MODE_PRIVATE).edit { clear() }
         CookieManager.getInstance().removeAllCookies(null)
         CookieManager.getInstance().flush()
         android.webkit.WebStorage.getInstance().deleteAllData()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            android.webkit.WebView.clearClientCertPreferences(null)
-        }
+        android.webkit.WebView.clearClientCertPreferences(null)
         // Limpa o cache do WebView (assíncrono)
         val context = applicationContext
         android.webkit.WebView(context).apply {
@@ -174,7 +172,7 @@ class SettingsActivity : AppCompatActivity() {
         }
         CoroutineScope(Dispatchers.IO).launch {
             Glide.get(context).clearDiskCache()
-          }
+        }
         Glide.get(context).clearMemory()
     }
 
@@ -289,9 +287,10 @@ class SettingsActivity : AppCompatActivity() {
         runOnUiThread {
             try {
                 if (!apkFile.exists()) { showError("Arquivo APK não encontrado"); return@runOnUiThread }
+                // CORREÇÃO: autoridade deve ser ".fileprovider" conforme definido no AndroidManifest.xml
                 val apkUri = FileProvider.getUriForFile(
                     this@SettingsActivity,
-                    "${BuildConfig.APPLICATION_ID}.provider",
+                    "${BuildConfig.APPLICATION_ID}.fileprovider",
                     apkFile
                 )
                 val installIntent = Intent(Intent.ACTION_VIEW).apply {

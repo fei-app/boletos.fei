@@ -181,7 +181,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun iniciarBoletosWorker() {
-        val work = PeriodicWorkRequest.Builder(BoletosWorker::class.java, 20, TimeUnit.MINUTES).build()
+        val work = PeriodicWorkRequest.Builder(BoletosWorker::class.java, 120, TimeUnit.MINUTES).build()
         WorkManager.getInstance(this).enqueueUniquePeriodicWork("BoletosWorkerTask", ExistingPeriodicWorkPolicy.KEEP, work)
     }
 

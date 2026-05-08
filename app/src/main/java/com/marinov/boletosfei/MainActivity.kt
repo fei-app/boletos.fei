@@ -176,12 +176,12 @@ class MainActivity : AppCompatActivity() {
     // ── Workers ────────────────────────────────────────
 
     private fun iniciarUpdateWorker() {
-        val work = PeriodicWorkRequest.Builder(UpdateCheckWorker::class.java, 15, TimeUnit.MINUTES).build()
+        val work = PeriodicWorkRequest.Builder(UpdateCheckWorker::class.java, 120, TimeUnit.MINUTES).build()
         WorkManager.getInstance(this).enqueueUniquePeriodicWork("UpdateCheckWorker", ExistingPeriodicWorkPolicy.KEEP, work)
     }
 
     private fun iniciarBoletosWorker() {
-        val work = PeriodicWorkRequest.Builder(BoletosWorker::class.java, 120, TimeUnit.MINUTES).build()
+        val work = PeriodicWorkRequest.Builder(BoletosWorker::class.java, 20, TimeUnit.MINUTES).build()
         WorkManager.getInstance(this).enqueueUniquePeriodicWork("BoletosWorkerTask", ExistingPeriodicWorkPolicy.KEEP, work)
     }
 

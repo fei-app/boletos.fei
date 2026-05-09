@@ -38,6 +38,10 @@
         android:requestLegacyExternalStorage="true"
         tools:targetApi="33">
 
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-8734981142486691~6755264583" />
+
         <!-- Configurações de notch e temas dinâmicos -->
         <meta-data
             android:name="android.notch_support"

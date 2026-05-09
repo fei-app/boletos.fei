@@ -9,12 +9,15 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.annotation.NonNull
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdView
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -28,8 +31,9 @@ class BoletosFragment : Fragment() {
     private lateinit var barOffline: LinearLayout
     private lateinit var txtSemDados: TextView
     private lateinit var btnTentar: Button
-
     private val adapter = BoletoAdapter(emptyList()) { boleto -> onBaixarBoleto(boleto) }
+
+    private var adView: AdView? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -45,6 +49,11 @@ class BoletosFragment : Fragment() {
         txtSemDados = view.findViewById(R.id.txt_sem_dados)
         btnTentar = view.findViewById(R.id.btnLogin)
 
+        // Inicializa AdMob
+        adView = view.findViewById(R.id.adView)
+        val adRequest = AdRequest.Builder().build()
+        adView?.loadAd(adRequest)
+
         recyclerBoletos.layoutManager = LinearLayoutManager(requireContext())
         recyclerBoletos.adapter = adapter
 
@@ -56,6 +65,22 @@ class BoletosFragment : Fragment() {
         loadBoletos()
     }
 
+    override fun onResume() {
+        super.onResume()
+        adView?.resume()
+    }
+
+    override fun onPause() {
+        adView?.pause()
+        super.onPause()
+    }
+
+    override fun onDestroyView() {
+        adView?.destroy()
+        adView = null
+        super.onDestroyView()
+    }
+
     fun loadBoletos() {
         lifecycleScope.launch {
             val mainActivity = activity as? MainActivity ?: return@launch
@@ -63,9 +88,7 @@ class BoletosFragment : Fragment() {
 
             val status = mainActivity.checkConnectionAndSession()
 
-            // Se sessão expirou, a própria Activity já será finalizada; abortamos.
             if (status == MainActivity.STATUS_LOGIN_NEEDED) {
-                // O redirecionamento ao login já foi disparado, não há mais o que fazer.
                 return@launch
             }
 
@@ -73,7 +96,6 @@ class BoletosFragment : Fragment() {
 
             if (online) hideOfflineBar() else showOfflineBar()
 
-            // Carrega os boletos, tratando separadamente o erro de sessão expirada
             val boletos = try {
                 if (online) {
                     withContext(Dispatchers.IO) { Dados.getBoletos(online = true) }
@@ -81,21 +103,17 @@ class BoletosFragment : Fragment() {
                     withContext(Dispatchers.IO) { Dados.getBoletos(online = false) }
                 }
             } catch (_: SessionExpiredException) {
-                // Sessão inválida detectada durante a requisição → força novo login
                 mainActivity.checkConnectionAndSession()
                 return@launch
             } catch (_: Exception) {
-                // Em caso de erro de rede, tenta o cache mesmo que soubéssemos estar online
                 withContext(Dispatchers.IO) { Dados.getBoletos(online = false) }
             }
 
-            // Ordena por vencimento decrescente
             val boletosOrdenados = boletos.sortedByDescending { boleto ->
                 val partes = boleto.vencimento.split("/")
                 if (partes.size == 3) "${partes[2]}-${partes[1]}-${partes[0]}" else boleto.vencimento
             }
 
-            // Desliga o indicador de pull‑to‑refresh
             if (swipeRefreshLayout.isRefreshing) {
                 swipeRefreshLayout.isRefreshing = false
             }

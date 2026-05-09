@@ -10,7 +10,7 @@ android {
         minSdk = 30
         targetSdk = 37
         versionCode = 1
-        versionName = "1.2"
+        versionName = "1.3"
     }
 
     buildTypes {
@@ -46,4 +46,5 @@ dependencies {
     implementation (libs.glide)
     annotationProcessor (libs.compiler)
     implementation (libs.swiperefreshlayout)
+    implementation(libs.play.services.ads)
 }

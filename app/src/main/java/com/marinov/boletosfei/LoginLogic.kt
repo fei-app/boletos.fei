@@ -15,9 +15,9 @@ data class LoginResult(
 
 object LoginLogic {
     const val LOGIN_URL = "https://interage.fei.org.br/secureserver/portal"
+
     suspend fun performLogin(user: String, pass: String, context: Context): LoginResult = withContext(Dispatchers.IO) {
         try {
-            // 1. Acessar a página de login para pegar os cookies iniciais e o Token
             val resGet = Jsoup.connect(LOGIN_URL)
                 .method(Connection.Method.GET)
                 .execute()
@@ -30,7 +30,6 @@ object LoginLogic {
                 return@withContext LoginResult(false, "Não foi possível obter o token de segurança da página.")
             }
 
-            // 2. Fazer o POST com os dados de login
             val resPost = Jsoup.connect("$LOGIN_URL/")
                 .data("__RequestVerificationToken", token)
                 .data("Usuario", user)
@@ -41,10 +40,11 @@ object LoginLogic {
                 .execute()
 
             val docPost = resPost.parse()
-            val isSuccess = docPost.select("#btn-login").isEmpty() // Se o botão sumiu, logou com sucesso
+            val isSuccess = docPost.select("#btn-login").isEmpty()
+
+            val prefs = LoginActivity.getEncryptedPrefs(context)
 
             if (isSuccess) {
-                // 3. Salvar os cookies de sessão no CookieManager com expiração de 15 minutos
                 val cookieManager = CookieManager.getInstance()
                 cookieManager.setAcceptCookie(true)
                 resPost.cookies().forEach { (key, value) ->
@@ -55,25 +55,21 @@ object LoginLogic {
                 }
                 cookieManager.flush()
 
-                // 4. Atualizar estado de login nas SharedPreferences
-                context.getSharedPreferences(LoginActivity.PREFS_LOGIN, Context.MODE_PRIVATE).edit {
+                prefs.edit {
                     putBoolean(LoginActivity.KEY_IS_LOGGED_IN, true)
                     putString(LoginActivity.KEY_USER, user)
                     putString(LoginActivity.KEY_PASS, pass)
                 }
-
                 return@withContext LoginResult(true)
             } else {
-                // Falha no login → garantir que estado fique como false
-                context.getSharedPreferences(LoginActivity.PREFS_LOGIN, Context.MODE_PRIVATE).edit {
+                prefs.edit {
                     putBoolean(LoginActivity.KEY_IS_LOGGED_IN, false)
                 }
                 val errorMsg = docPost.select(".field-validation-error").text()
                 return@withContext LoginResult(false, errorMsg.ifEmpty { "Usuário ou senha incorretos." })
             }
         } catch (e: Exception) {
-            // Em caso de erro, também marcamos como não logado
-            context.getSharedPreferences(LoginActivity.PREFS_LOGIN, Context.MODE_PRIVATE).edit {
+            LoginActivity.getEncryptedPrefs(context).edit {
                 putBoolean(LoginActivity.KEY_IS_LOGGED_IN, false)
             }
             return@withContext LoginResult(false, "Erro de conexão: ${e.message}")

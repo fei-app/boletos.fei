@@ -22,14 +22,10 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.PeriodicWorkRequest
-import androidx.work.WorkManager
 import com.google.android.material.appbar.MaterialToolbar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
 
@@ -77,9 +73,8 @@ class MainActivity : AppCompatActivity() {
 
         handleIntent(intent)
 
-        iniciarUpdateWorker()
-        iniciarBoletosWorker()
-        iniciarLoginWorker()
+        // Substitui as chamadas antigas de workers pelo WorkerManagerHelper
+        WorkerManagerHelper.iniciarWorkers(this)
     }
 
     override fun onNewIntent(intent: Intent?) {
@@ -94,15 +89,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ── Login ──────────────────────────────────────────
-
     private fun isUserLoggedIn(): Boolean {
-        val prefs = getSharedPreferences(LoginActivity.PREFS_LOGIN, MODE_PRIVATE)
+        val prefs = LoginActivity.getEncryptedPrefs(this)
         return prefs.getBoolean(LoginActivity.KEY_IS_LOGGED_IN, false)
     }
 
     private fun launchLogin() {
-        getSharedPreferences(LoginActivity.PREFS_LOGIN, MODE_PRIVATE).edit {
+        LoginActivity.getEncryptedPrefs(this).edit {
             putBoolean(LoginActivity.KEY_IS_LOGGED_IN, false)
         }
         startActivity(
@@ -112,8 +105,6 @@ class MainActivity : AppCompatActivity() {
         )
         finish()
     }
-
-    // ── Conexão / Sessão ───────────────────────────────
 
     fun isOnline(): Boolean {
         val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -145,8 +136,6 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch { checkConnectionAndSession() }
     }
 
-    // ── Menu superior ──────────────────────────────────
-
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.top_app_bar_menu, menu)
         return true
@@ -170,27 +159,6 @@ class MainActivity : AppCompatActivity() {
             else -> super.onOptionsItemSelected(item)
         }
     }
-
-    // ── Navegação ──────────────────────────────────────
-
-    // ── Workers ────────────────────────────────────────
-
-    private fun iniciarUpdateWorker() {
-        val work = PeriodicWorkRequest.Builder(UpdateCheckWorker::class.java, 120, TimeUnit.MINUTES).build()
-        WorkManager.getInstance(this).enqueueUniquePeriodicWork("UpdateCheckWorker", ExistingPeriodicWorkPolicy.KEEP, work)
-    }
-
-    private fun iniciarBoletosWorker() {
-        val work = PeriodicWorkRequest.Builder(BoletosWorker::class.java, 20, TimeUnit.MINUTES).build()
-        WorkManager.getInstance(this).enqueueUniquePeriodicWork("BoletosWorkerTask", ExistingPeriodicWorkPolicy.KEEP, work)
-    }
-
-    private fun iniciarLoginWorker() {
-        val work = PeriodicWorkRequest.Builder(LoginWorker::class.java, 15, TimeUnit.MINUTES).build()
-        WorkManager.getInstance(this).enqueueUniquePeriodicWork("LoginWorkerTask", ExistingPeriodicWorkPolicy.KEEP, work)
-    }
-
-    // ── Sistema (legado) ──────────────────────────────
 
     @SuppressLint("ObsoleteSdkInt")
     private fun configureSystemBarsForLegacyDevices() {

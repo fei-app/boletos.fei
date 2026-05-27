@@ -15,6 +15,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.net.toUri
+import com.judemanutd.autostarter.AutoStartPermissionHelper
 
 object PermissionHelper {
 
@@ -32,29 +33,26 @@ object PermissionHelper {
         solicitarPermissoesNecessarias(activity)
         solicitarIsencaoOtimizacaoBateria(activity)
 
+        try {
+            if (AutoStartPermissionHelper.getInstance().isAutoStartPermissionAvailable(activity)) {
+                AutoStartPermissionHelper.getInstance().getAutoStartPermission(activity)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Falha ao solicitar permissão de AutoStart (OEM)", e)
+        }
+
         prefs.edit { putBoolean(PREF_KEY_PERMISSIONS_REQUESTED, true) }
     }
 
     private fun solicitarPermissoesNecessarias(activity: Activity) {
         val permissoesParaSolicitar = mutableListOf<String>()
 
-        // 1. Notificações (Android 13+) - Importante para acompanhar progresso de Downloads
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(
                     activity, Manifest.permission.POST_NOTIFICATIONS
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
                 permissoesParaSolicitar.add(Manifest.permission.POST_NOTIFICATIONS)
-            }
-        }
-
-        // 2. Armazenamento Externo (Android 9 ou inferior) - Necessário para DownloadManager em SDKs antigos
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            if (ContextCompat.checkSelfPermission(
-                    activity, Manifest.permission.WRITE_EXTERNAL_STORAGE
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                permissoesParaSolicitar.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
             }
         }
 
@@ -73,7 +71,6 @@ object PermissionHelper {
         val prefs = activity.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val batteryRequested = prefs.getBoolean(PREF_KEY_BATTERY_REQUESTED, false)
         if (batteryRequested) return
-
         try {
             val pm = activity.getSystemService(Context.POWER_SERVICE) as PowerManager
             if (pm.isIgnoringBatteryOptimizations(activity.packageName)) {

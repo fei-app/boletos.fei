@@ -10,7 +10,7 @@ android {
         minSdk = 30
         targetSdk = 37
         versionCode = 1
-        versionName = "1.3.1"
+        versionName = "1.3.2"
     }
 
     buildTypes {
@@ -33,7 +33,6 @@ android {
 }
 
 dependencies {
-
     implementation(libs.material)
     implementation(libs.constraintlayout)
     implementation(libs.navigation.fragment)
@@ -47,4 +46,7 @@ dependencies {
     annotationProcessor (libs.compiler)
     implementation (libs.swiperefreshlayout)
     implementation(libs.play.services.ads)
+    implementation(libs.security.crypto)
+    implementation(libs.autostarter)
+    implementation(libs.biometric)
 }

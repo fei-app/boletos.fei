@@ -1,7 +1,9 @@
 package com.marinov.boletosfei
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Color
 import android.net.ConnectivityManager
@@ -16,6 +18,7 @@ import android.view.WindowManager
 import android.webkit.CookieManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.view.ViewCompat
@@ -35,6 +38,7 @@ class MainActivity : AppCompatActivity() {
         const val STATUS_ONLINE_OK = "1"
         const val STATUS_LOGIN_NEEDED = "A"
         private const val HOME_URL = "https://interage.fei.org.br/secureserver/portal/graduacao/home"
+        private const val REQUEST_NOTIFICATION_PERMISSION = 101   // <-- NOVO
     }
 
     private var currentFragment: Fragment? = null
@@ -58,7 +62,6 @@ class MainActivity : AppCompatActivity() {
             v.setPadding(v.paddingLeft, statusBarHeight, v.paddingRight, v.paddingBottom)
             insets
         }
-
         if (savedInstanceState == null) {
             val fragment = BoletosFragment()
             boletosFragment = fragment
@@ -73,8 +76,8 @@ class MainActivity : AppCompatActivity() {
 
         handleIntent(intent)
 
-        // Substitui as chamadas antigas de workers pelo WorkerManagerHelper
-        WorkerManagerHelper.iniciarWorkers(this)
+        // Substitui WorkerManagerHelper pela inicialização do serviço foreground
+        BackgroundService.start(this)   // <-- ALTERADO
     }
 
     override fun onNewIntent(intent: Intent?) {
@@ -95,14 +98,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun launchLogin() {
-        LoginActivity.getEncryptedPrefs(this).edit {
-            putBoolean(LoginActivity.KEY_IS_LOGGED_IN, false)
-        }
-        startActivity(
-            Intent(this, LoginActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            }
-        )
+        LoginActivity.getEncryptedPrefs(this).edit { putBoolean(LoginActivity.KEY_IS_LOGGED_IN, false) }
+        startActivity(Intent(this, LoginActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        })
         finish()
     }
 
@@ -133,7 +132,28 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        requestNotificationPermissionIfNeeded()   // <-- NOVO: solicita permissão sempre que o app é aberto
         lifecycleScope.launch { checkConnectionAndSession() }
+    }
+
+    // ===================== PERMISSÃO DE NOTIFICAÇÃO =====================
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this, Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                try {
+                    ActivityCompat.requestPermissions(
+                        this,
+                        arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                        REQUEST_NOTIFICATION_PERMISSION
+                    )
+                } catch (e: Exception) {
+                    Log.w(TAG, "Erro ao solicitar permissão de notificação", e)
+                }
+            }
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -162,6 +182,7 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("ObsoleteSdkInt")
     private fun configureSystemBarsForLegacyDevices() {
+        // (mantido exatamente como estava, sem alterações)
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
             val isDarkMode = when (AppCompatDelegate.getDefaultNightMode()) {
                 AppCompatDelegate.MODE_NIGHT_YES -> true
